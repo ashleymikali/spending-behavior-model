@@ -1,1 +1,1 @@
-# spending-logistic-model
+# spending-habit-prediction
