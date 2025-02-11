@@ -783,6 +783,7 @@ predicted_probability_plot <- ggplot(grid, aes(x = materialism, y = predicted_pr
 ```
 
 ```{r displaying-predicted-probability-plot}
+#| fig-align: "center"
 predicted_probability_plot
 ```
 
@@ -800,6 +801,6 @@ Moreover, it is hard to measure spending habits in particular because of how amb
 
 Summary of the environment:
 
-```{r}
+```{r displaying-metadata}
 sessionInfo()
 ```
