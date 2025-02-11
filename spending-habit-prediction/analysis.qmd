@@ -3,7 +3,7 @@ title: "Final Project"
 author: "ash r"
 format: html
 page-layout: full
-theme: lux
+#theme: lux
 editor: visual
 ---
 
@@ -667,9 +667,9 @@ ya_spending_impulsive_bar
 
 # 11: Regression Models
 
-Note: All models are logistic regression models with spending habits as the response variable.
+## Making the Models
 
-### Model 1: Materialism as the predictor variable
+### Model 1: Using Materalism to Predict Spending Habits in Young Adults
 
 ```{r materialism_model}
 materialism_fit <- glm(spending_binary ~ materialism, data = young_adult, family = "binomial")
@@ -679,7 +679,7 @@ glance(materialism_fit) |>
   dplyr::select(AIC, BIC) |> kable()
 ```
 
-### Model 2: Impulsivity/self-control as the predictor variable
+### Model 2: Using Impulsivity to Predict Spending Habits in Young Adults
 
 ```{r impulsive-fit-model}
 impulsive_fit <- glm(spending_binary ~ impulsive, data = young_adult, family = "binomial")
@@ -689,7 +689,7 @@ glance(impulsive_fit) |>
   dplyr::select(AIC, BIC) |> kable()
 ```
 
-### Model 3: materialism AND impulsivity as the predictor variables
+### Model 3: Using Materialism & Impulsivity to Predict Spending Habits in Young Adults
 
 ```{r add-both-predictors-model}
 add_fit <- glm(spending_binary ~ materialism + impulsive, data = young_adult, family = "binomial")
@@ -699,7 +699,7 @@ glance(add_fit) |>
   dplyr::select(AIC, BIC) |> kable()
 ```
 
-### Model 4: Materialism & impulsivity AND both variables as an interaction term
+### Model 4: Using Materialism & Impulsivity AND Their Interaction to Predict Spending Habits in Young Adults
 
 ```{r interaction-model}
 interact_fit <- glm(spending_binary ~ materialism + impulsive + materialism * impulsive,
@@ -712,9 +712,7 @@ glance(interact_fit) |>
 
 ------------------------------------------------------------------------
 
-thoughts: the impulsive model seems to have the best fit. stronger p values too.
-
-choices: #2 for simplicity and lowest bic, #3 for maximisation of model fit but will need to explain p values
+## Comparing the Models to Determine the "Best" One
 
 | Model          | Statistically Significant P-Values | AIC | BIC |
 |----------------|------------------------------------|-----|-----|
@@ -737,15 +735,13 @@ Models 2 and 3 are the best ones, overall. An analytical decision was made here,
 
 -   What we can learn from Model 2, however, is that impulsivity plays a huge role here.
 
-\*Note: I'm pretty sure I said this the other way around in the presentation, that Model 3 had a lower BIC than Model 2. I think I did. If so... that was yet another error on my part.
-
-### Assumptions:
+## Assumptions
 
 Linearity
 
 -   A logistic model doesn't assume a linear relationship between the dependent and independent variables.
 
-    -   Should I investigate the log odds using logit? Probably. ¯\\\_(ツ)\_/¯ (Acknowledging that I didn't - AR)
+    -   Note: Should I investigate the log odds using logit? Probably. Ask about that.
 
 Randomness:
 
@@ -753,11 +749,11 @@ Randomness:
 
 Independence:
 
--   Somewhat (?) met in both.
+-   Somewhat met in both.
 
 ------------------------------------------------------------------------
 
-### Plot of the Model
+## Plot of Model 3:
 
 ```{r predicted-probability-plot}
 #| warning: false
@@ -769,27 +765,40 @@ grid <- expand.grid(
 
 grid$predicted_prob <- predict(add_fit, newdata = grid, type = "response")
 
-ggplot(grid, aes(x = materialism, y = predicted_prob, color = impulsive, group = impulsive)) +
+predicted_probability_plot <- ggplot(grid, aes(x = materialism, y = predicted_prob, color = impulsive, group = impulsive)) +
   geom_line(size = 1) +
   geom_point(size = 2) +
-  scale_color_brewer(palette = "Paired") +
+  scale_color_manual(values = green_palette) +
   labs(
-    title = "Predicted Probability of Good Spending Habits",
-    x = "Materialism Scale (from low to high)",
+    title = "Predicted Probability of Good Spending Habits in Young Adults (18-24)",
+    subtitles = "Based on Self-Reported Spending Habits Scores (Ranging from 'not at all (1) to 'completely' (5)",
+    caption = "* 'Materialism' scores range from 'strongly disagree' (1) to 'strongly agree' (5) \n* 'Impulsivity' scores range from 'not at all' (1) to 'completely well' (4)",
+    x = "Materialism Scale",
     y = "Predicted Probability",
-    color = "Impulsivity \nScale (from \nlow to \nhigh)"
-  ) + theme_minimal()
+    color = "Impulsivity Scale"
+  ) + 
+  theme_minimal() +
+  theme(plot.subtitle = element_text(size = 9),
+        plot.caption = element_text(hjust = 0, size = 10))
+```
+
+```{r displaying-predicted-probability-plot}
+predicted_probability_plot
 ```
 
 ------------------------------------------------------------------------
 
-The results from the graph shows us that self control and materialism does affect people's spending habits, at least to some extent. Impulsivity/self-control more than materialism (see: the gaps between the lines), which is also shown by our other models and their results.
+The results from the graph shows us that self control and materialism do affect people's spending habits, at least to some extent. Impulsivity plays a larger role than materialism (see: the gaps between the lines), which is also shown by our other models and their results.
 
 As materialism and impulsivity increase, "good" spending behaviours decrease.
 
 These results likely aren't generalisable, though. All of the variables are subjective and rely on people self-reporting. Answers aren't necessarily accurate.
 
 Moreover, it is hard to measure spending habits in particular because of how ambiguous the variable is. People can know how to keep themselves from spending too much, but that doesn't exactly say whether or not they actually do so.
+
+------------------------------------------------------------------------
+
+Summary of the environment:
 
 ```{r}
 sessionInfo()
