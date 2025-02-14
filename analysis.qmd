@@ -1,6 +1,6 @@
 ---
-title: "Final Project"
-author: "ash r"
+title: "A Logistic Regression Analysis of Spending Control Based on Materialism and Impulsivity"
+author: "Ash R"
 format: html
 page-layout: full
 theme: lux
@@ -202,7 +202,7 @@ special_purple <- "#412d5e"
 
 ------------------------------------------------------------------------
 
-## Spending Habits, Consulting a Budget:
+## Spending Habits, Consulting a Budget
 
 ```{r spending-and-budget-bars}
 spending_bar <- gf_bar( ~ spending_habit, data = finance, fill = special_purple) |> 
@@ -235,7 +235,7 @@ budget_bar
 
 ------------------------------------------------------------------------
 
-## Frugality, Materialism:
+## Frugality, Materialism
 
 ```{r frugality-and-materialism-bars}
 frugality_bar <- gf_bar( ~ frugality, data = finance, fill = special_purple) |> 
@@ -268,7 +268,7 @@ materialism_bar
 
 ------------------------------------------------------------------------
 
-## Impulsivity, Temptation:
+## Impulsivity, Temptation
 
 ```{r impulsive-and-temptation-bars}
 impulsive_bar <- gf_bar( ~ impulsive, data = finance, fill = special_purple) |> 
@@ -301,7 +301,7 @@ temptation_bar
 
 ------------------------------------------------------------------------
 
-## Age:
+## Age
 
 ```{r age-bar}
 age_group_bar <- gf_bar( ~ age_group, data = finance, fill = special_purple) |> 
@@ -327,7 +327,7 @@ age_group_bar
 purple_palette <- brewer.pal(7, "Purples")[3:7]
 ```
 
-## Spending Habits & Consulting a Budget:
+## Spending Habits & Consulting a Budget
 
 ```{r spending-consult-budget-bar-tally}
 spending_budget_bar <- gf_bar(~ consult_budget, data = finance, fill = ~ spending_habit, position = "fill") |>
@@ -356,7 +356,7 @@ spending_budget_tally
 
 ------------------------------------------------------------------------
 
-## Spending Habits & Frugality:
+## Spending Habits & Frugality
 
 ```{r spending-frugality-bar-tally}
 spending_frugality_bar <- gf_bar(~ frugality, data = finance, fill = ~ spending_habit, position = "fill") |>
@@ -385,7 +385,7 @@ spending_frugality_tally
 
 ------------------------------------------------------------------------
 
-## Spending Habits & Materialism:
+## Spending Habits & Materialism
 
 ```{r spending-materialism-bar-tally}
 spending_materialism_bar <- gf_bar(~ materialism, data = finance, fill = ~ spending_habit, position = "fill") |>
@@ -414,7 +414,7 @@ spending_materialism_tally
 
 ------------------------------------------------------------------------
 
-## Spending Habits & Impulsivity:
+## Spending Habits & Impulsivity
 
 ```{r spending-impulsive-bar-tally}
 spending_impulsive_bar <- gf_bar(~ impulsive, data = finance, fill = ~ spending_habit, position = "fill") |>
@@ -443,7 +443,7 @@ spending_impulsive_tally
 
 ------------------------------------------------------------------------
 
-## Spending Habits & Resisting Temptation:
+## Spending Habits & Resisting Temptation
 
 ```{r spending-temptation-bar-tally}
 spending_temptation_bar <- gf_bar(~ resist_temptation, data = finance, fill = ~ spending_habit, position = "fill") |>
@@ -472,7 +472,7 @@ spending_temptation_tally
 
 ------------------------------------------------------------------------
 
-## Spending Habits & Age:
+## Spending Habits & Age
 
 ```{r spending-age-bar-tally}
 spending_age_bar <- gf_bar(~ age_group, data = finance, fill = ~ spending_habit, position = "fill") |>
@@ -634,7 +634,7 @@ ya_spending_impulsive_tally
 
 # Comparisons
 
-## Spending Habits in Total Sample vs Young Adults:
+## Spending Habits in Total Sample vs Young Adults
 
 ```{r displaying-spending-bar-total-ya}
 #| layout-ncol: 2
@@ -645,7 +645,7 @@ ya_spending_bar
 
 ------------------------------------------------------------------------
 
-## Spending Habits & Materialism in Total Sample vs Young Adults:
+## Spending Habits & Materialism in Total Sample vs Young Adults
 
 ```{r displaying-spending-materialism-bar-total-ya}
 #| layout-ncol: 2
@@ -656,7 +656,7 @@ ya_spending_materialism_bar
 
 ------------------------------------------------------------------------
 
-## Spending Habits & Impulsivity in Total Sample vs Young Adults:
+## Spending Habits & Impulsivity in Total Sample vs Young Adults
 
 ```{r displaying-spending-impulsive-bar-total-ya}
 #| layout-ncol: 2
@@ -753,7 +753,7 @@ Independence:
 
 ------------------------------------------------------------------------
 
-## Plot of Model 3:
+## Plot of Model 3
 
 ```{r predicted-probability-plot}
 #| warning: false
