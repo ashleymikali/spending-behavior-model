@@ -3,11 +3,11 @@ title: "Final Project"
 author: "ash r"
 format: html
 page-layout: full
-#theme: lux
+theme: lux
 editor: visual
 ---
 
-# 1: Loading Relevant Packages
+# Loading Relevant Packages
 
 ```{r load-packages}
 #| message: false
@@ -21,13 +21,13 @@ library(broom)
 library(RColorBrewer)
 ```
 
-# 2: Loading the Data Set
+# Loading the Data Set
 
 ```{r load-data}
 finance_data <- read.csv("data/NFWBS_PUF_2016_data.csv")
 ```
 
-# 3: Creating a New Data Frame with Relevant Variables
+# Creating a New Data Frame with Relevant Variables
 
 ```{r new-df}
 finance <- data.frame(
@@ -47,7 +47,7 @@ The result:
 glimpse(finance)
 ```
 
-# 4: Data Dictionary
+# Data Dictionary
 
 The following are responses from the survey, along with their scales of measurement.
 
@@ -132,7 +132,7 @@ The following are responses from the survey, along with their scales of measurem
     -   7: 70-74
     -   8: 75+
 
-# 5: Cleaning the Data
+# Cleaning the Data
 
 The following variables include a score of -1 to indicate that the respondent refused to answer: `spending_habit`, `frugality`, `materialism`, `impulsive`, `resist_temptation`.
 
@@ -193,7 +193,7 @@ The result:
 kable(head(finance))
 ```
 
-# 6: Univariate Plots
+# Univariate Plots
 
 ```{r new_colour}
 #I wanted to use a specific colour, so I assigned its hex code to a variable.
@@ -320,7 +320,7 @@ age_group_bar <- gf_bar( ~ age_group, data = finance, fill = special_purple) |>
 age_group_bar
 ```
 
-# 7: Bivariate Plots
+# Bivariate Plots
 
 ```{r new-purple-palette}
 # The lightest color for my desired palette is too light, so I'm modifying it to skip it
@@ -501,7 +501,7 @@ spending_age_tally
 
 ------------------------------------------------------------------------
 
-# 8: Summaries
+# Summaries
 
 ```{r generalised-pairs-plot}
 #| warning: false
@@ -510,7 +510,7 @@ spending_age_tally
 ggpairs(finance)
 ```
 
-# 9: Adjustments & New Plots
+# Adjustments & New Plots
 
 I decided to narrow my scope to young adults (ages 18-24). This reduced my number of observations to 396 (from 6195).
 
@@ -632,7 +632,7 @@ ya_spending_impulsive_jitter
 ya_spending_impulsive_tally
 ```
 
-# 10: Comparisons
+# Comparisons
 
 ## Spending Habits in Total Sample vs Young Adults:
 
@@ -665,7 +665,7 @@ spending_impulsive_bar
 ya_spending_impulsive_bar
 ```
 
-# 11: Regression Models
+# Regression Models
 
 ## Making the Models
 
@@ -789,7 +789,9 @@ predicted_probability_plot
 
 ------------------------------------------------------------------------
 
-The results from the graph shows us that self control and materialism do affect people's spending habits, at least to some extent. Impulsivity plays a larger role than materialism (see: the gaps between the lines), which is also shown by our other models and their results.
+# Final Thoughts
+
+The results from the graph above show that self control and materialism do affect people's spending habits, at least to some extent. Impulsivity plays a larger role than materialism (see: the gaps between the lines), which is also shown by our other models and their results.
 
 As materialism and impulsivity increase, "good" spending behaviours decrease.
 
@@ -799,7 +801,7 @@ Moreover, it is hard to measure spending habits in particular because of how amb
 
 ------------------------------------------------------------------------
 
-Summary of the environment:
+# Summary of Environment
 
 ```{r displaying-metadata}
 sessionInfo()
