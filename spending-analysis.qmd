@@ -1,5 +1,5 @@
 ---
-title: "A Logistic Regression Analysis of Spending Control Based on Materialism and Impulsivity"
+title: "Logistic Regression Analysis of Spending Control Based on Materialism and Impulsivity"
 author: "Ash R"
 format: html
 page-layout: full
@@ -136,7 +136,7 @@ The following are responses from the survey, along with their scales of measurem
 
 The following variables include a score of -1 to indicate that the respondent refused to answer: `spending_habit`, `frugality`, `materialism`, `impulsive`, `resist_temptation`.
 
-That is not helpful in this instance, so I removed all observations with that score. Note that, per the official data dictionary provided by the CFPB (<https://files.consumerfinance.gov/f/documents/cfpb_nfwbs-puf-codebook.pdf>), there were no (relevant) observations that included the number 0.
+That is not helpful in this instance, so I removed all observations with that score. Note that, per the official data dictionary provided by the [CFPB](https://files.consumerfinance.gov/f/documents/cfpb_nfwbs-puf-codebook.pdf), there were no (relevant) observations that included the number 0.
 
 ```{r remove-negative}
 #I filtered the data frame to only include observations that are not -1.
@@ -501,7 +501,7 @@ spending_age_tally
 
 ------------------------------------------------------------------------
 
-# Summaries
+## Generalized Pairs Plot
 
 ```{r generalised-pairs-plot}
 #| warning: false
