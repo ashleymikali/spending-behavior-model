@@ -1,6 +1,6 @@
 # Logistic Regression Analysis of Spending Control Based on Materialism and Impulsivity
 
-This project explores spending behavior using logistic regression, analyzing how various personality traits influence spending categories. Multiple models were tested, and the final model was selected based on AIC and relevance to the research question.
+This project explores spending behavior using logistic regression, analyzing how various personality traits influence spending behaviors. Multiple models were tested, and the final model was selected based on AIC and relevance to the research question.
 
 ## 📌 Project Structure
 
