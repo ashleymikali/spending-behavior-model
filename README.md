@@ -1,4 +1,4 @@
-# Logistic Regression Analysis of Spending Control Based on Character Traits
+# Logistic Regression Analysis of Spending Habits Based on Character Traits
 
 This project explores spending behavior using logistic regression, analyzing how various character traits influence spending behaviors. Multiple models were tested, and the final model was selected based on AIC and relevance to the research question.
 
