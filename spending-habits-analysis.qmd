@@ -2,6 +2,7 @@
 title: "Analyzing Spending Habits With Logistic Regression"
 author: "Ashley Russell"
 description: "Exploring indicators of spending habit behaviors using logistic regression."
+image: spending-habits-analysis_files/figure-html/predicted-prob-plot-1.png
 categories:
   - R
   - Exploratory Data Analysis
@@ -12,7 +13,7 @@ format:
     code-overflow: wrap
     toc: true
     number-sections: true
-theme: flatly
+#theme: flatly
 editor: visual
 page-layout: full
 ---
