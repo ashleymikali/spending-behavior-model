@@ -1,0 +1,13 @@
+name: spending_bivariate
+title: spending_bivariate
+username: ashleymikali
+account: ashleymikali
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 14560174
+bundleId: 10142400
+url: https://ashleymikali.shinyapps.io/spending_bivariate/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: spending_eda_app.R

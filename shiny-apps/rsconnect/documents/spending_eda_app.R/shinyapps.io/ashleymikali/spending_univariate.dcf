@@ -1,0 +1,12 @@
+name: spending_univariate
+title: spending_univariate
+username: ashleymikali
+account: ashleymikali
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 14552550
+bundleId: 10137179
+url: https://ashleymikali.shinyapps.io/spending_univariate/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
