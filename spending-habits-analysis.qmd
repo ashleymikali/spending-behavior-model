@@ -1,0 +1,794 @@
+---
+title: "Analyzing Spending Habits With Logistic Regression"
+author: "Ashley Russell"
+description: "Exploring indicators of spending habit behaviors using logistic regression."
+categories:
+  - R
+  - Exploratory Data Analysis
+  - Logistic Regression
+  - Shiny
+format:
+  html:
+    code-overflow: wrap
+    toc: true
+    number-sections: true
+theme: flatly
+editor: visual
+page-layout: full
+---
+
+# Introduction
+
+This project investigates how various character traits influence spending behaviors in adults (18+). Using data from the [National Financial Well-Being Survey](https://www.consumerfinance.gov/data-research/financial-well-being-survey-data/) (collected by the Consumer Financial Protection Bureau), I explored how these factors impact the likelihood of exhibiting “good” or “bad” spending habits across different age groups.
+
+## Rationale
+
+I found this an interesting topic as it prompted me to reflect on my own spending habits.
+
+## About the Data
+
+The data was collected from a diverse sample of adults (18 and older) across all 50 U.S. states and the District of Columbia, conducted between October 27 and December 5, 2016. The sample included 6,394 individuals (5,295 from the general population and 999 from an oversample of adults aged 62 and over). This dataset is randomized and aims to be representative of the adult population.
+
+# Data Wrangling
+
+Preliminary steps included loading the necessary libraries, importing the dataset, and extracting the variables I wanted from it into a data frame.
+
+```{r load-packages}
+#| message: false
+#| code-fold: true
+#| code-summary: "Libraries Used (expand to view code)"
+
+library(tidyverse)
+library(knitr)
+library(ggformula)
+library(GGally)
+library(dplyr)
+library(mosaic)
+library(broom)
+library(RColorBrewer)
+library(ggplot2)
+library(wacolors)
+library(MASS)
+library(car)
+library(tidymodels)
+library(naniar)
+library(olsrr)
+library(stringr)
+```
+
+```{r load-data}
+#| code-fold: true
+#| code-summary: "Data Importation (expand to view code)"
+
+finance_data <- read.csv("data/NFWBS_PUF_2016_data.csv")
+```
+
+```{r new-df}
+#| code-fold: true
+#| code-summary: "Variable Extraction (expand to view code)"
+
+finance <- data.frame(
+  follow_commitment = finance_data$ACT1_1,
+  frugality = finance_data$FRUGALITY,
+  worded_probability = finance_data$SUBNUMERACY2,
+  percentage_skill = finance_data$SUBNUMERACY1,
+  goal_confidence = finance_data$GOALCONF,
+  admire_luxury = finance_data$MATERIALISM_1,
+  self_worth = finance_data$MATERIALISM_2,
+  impress_people = finance_data$MATERIALISM_3,
+  psych = finance_data$CONNECT,
+  distress = finance_data$DISTRESS,
+  impulsivity = finance_data$SELFCONTROL_1,
+  resist_temptation = finance_data$SELFCONTROL_2,
+  long_term_goals = finance_data$SELFCONTROL_3,
+  economic_mobility = finance_data$PEM,
+  spending_habit = finance_data$FS1_6,
+  age_group = finance_data$agecat,
+  wellbeing = finance_data$FWBscore)
+```
+
+The various age groups were using ordinal encoding, so I renamed them to reflect the ages they represented (e.g. `18-24` instead of `1`, `25-34` instead of `2` and so forth).
+
+```{r rename-age}
+#| code-fold: true
+#| code-summary: "Renaming Age Groups (expand to view code)"
+
+finance <- finance |>
+ mutate(
+   age_group = case_when(
+   age_group == 1 ~ "18-24",
+   age_group == 2 ~ "25-34",
+   age_group == 3 ~ "35-44",
+   age_group == 4 ~ "45-54",
+   age_group == 5 ~ "55-61",
+   age_group == 6 ~ "62-69",
+   age_group == 7 ~ "70-74",
+   age_group == 8 ~ "75+")
+   )
+```
+
+I had two primary goals—to explore the data using graphs and to understand the relationship between our response variable and the predictor variables via statistical modeling, which would require different approaches (such as creating a category for missing values vs imputing them). Consequently, I made two copies of the data frame. As the names suggest, `finance_analysis` was used for the exploratory data analysis and `finance_modeling` for the modeling portion of this project.
+
+```{r make-copies}
+#| code-fold: true
+#| code-summary: "Duplicating Data Frames (expand to view code)"
+
+finance_analysis <- finance
+finance_modeling <- finance
+```
+
+Here's a preview of the first 6 rows in the data frame:
+
+```{r preview-data}
+#| code-fold: true
+#| code-summary: "Previewing Data (expand to view code)"
+
+head(finance) |> kable()
+```
+
+# Exploring Missing Responses
+
+## Counting Refused Questions
+
+Each column, except for `wellbeing`, represents a question answered by a respondent (`wellbeing` is a score given to the respondent based on answers to particular questions). "-1" means that the respondent refused to answer the question. I opted to count the number of questions (out of a total of 16) unanswered by each respondent and calculated a "refusal rate" for enhanced readability ("this person refused to answer 75% of the included questions" sounds nicer than "this person refused to answer 12 of the included questions").
+
+This led to the creation of two additional columns: `refused_questions` for the raw number and `refusal_rate` for the percentage.
+
+```{r count-refusals-analysis}
+#| code-fold: true
+#| code-summary: "Counting Refusals (expand to view code)"
+
+finance_analysis <- finance_analysis |>
+  mutate(
+    refused_questions = rowSums(across(-c(wellbeing), ~ .x == -1))
+    )
+```
+
+```{r refusal-rate}
+#| code-fold: true
+#| code-summary: "Calculating the Refusal Rate (expand to view code)"
+
+#I counted the number of (relevant) columns to avoid hard coding 
+num_columns <- ncol(finance_analysis)
+excluded_columns <- list("wellbeing", "refused_questions")
+num_excluded <- length(excluded_columns)
+sum_questions <- num_columns - num_excluded
+
+finance_analysis <- finance_analysis |>
+  mutate(
+    refusal_rate = round((refused_questions / sum_questions) * 100,
+                         2)
+  )
+```
+
+## Encoding Missing Responses
+
+Every column except for `age_group`, `refused_questions`, and `refusal_rate` contained at least one -1 value.
+
+```{r find-negatives}
+#| code-fold: true
+#| code-summary: "Identifying Columns with Refusals (expand to view code)"
+
+contains_refusals <- finance_analysis |>
+  summarise(across(everything(), ~ any(. < 0, na.rm = TRUE))) |>
+  pivot_longer(everything(), names_to = "variable", values_to = "has_refusal")
+
+contains_refusals |> kable()
+```
+
+I handled this in multiple ways:
+
+-   I replaced -1 with "refused" for the categorical variables, treating it as a separate category for data visualization purposes.
+
+    ```{r rename-refused}
+    #| code-fold: true
+    #| code-summary: "Renaming Refusals (expand to view code)"
+
+    finance_analysis <- finance_analysis |>
+      mutate(
+        across(-c(psych, wellbeing), ~ ifelse(. == -1, "refused", .))
+        )
+    ```
+
+<!-- -->
+
+-   Since `psych` and `wellbeing` are quantitative variables, I [replaced -1 values with numbers 10% below their minimums to preserve visual consistency on graphs](https://naniar.njtierney.com/articles/naniar.html#exploring-missingness-relationships). Note that `wellbeing` also contained a `-4` value, meaning "response not written to database". Since there was only one instance of this, I used a value 30% lower than the minimum to replace it.
+
+    ```{r min-values}
+    #| code-fold: true
+    #| code-summary: "Calculating Minimum and Replacement Values (expand to view code)"
+
+    psych_min <- min(finance_analysis$psych)
+    psych_refuse <- psych_min - ((10/100) * psych_min)
+
+    wellbeing_min <- min(finance_analysis$wellbeing)
+    wellbeing_refuse <- wellbeing_min - ((10/100) * wellbeing_min)
+    wellbeing_unwritten <- wellbeing_min - ((30/100) * wellbeing_min)
+    ```
+
+    ```{r create-replacement}
+    #| code-fold: true
+    #| code-summary: "Re-encoding Refusals for Quantitative Variables (expand to view code)"
+
+    finance_analysis <- finance_analysis |>
+      mutate(
+        psych = if_else(psych == -1, psych_refuse, psych),
+        wellbeing = case_when(
+          wellbeing == -4 ~ wellbeing_unwritten,
+          wellbeing == -1 ~ wellbeing_refuse,
+          TRUE ~ wellbeing)
+        )
+    ```
+
+## Wrapping Up
+
+To wrap things up, I factored the categorical variables so that responses would be grouped accordingly on graphs.
+
+```{r factor-variables-analysis}
+#| code-fold: true
+#| code-summary: "Factoring Categorical Variables (expand to view code)"
+
+finance_analysis <- finance_analysis |>
+  mutate(
+    spending_habit = factor(spending_habit),
+    follow_commitment = factor(follow_commitment),
+    frugality = factor(frugality),
+    worded_probability = factor(worded_probability),
+    percentage_skill = factor(percentage_skill),
+    goal_confidence = factor(goal_confidence),
+    admire_luxury = factor(admire_luxury),
+    self_worth = factor(self_worth),
+    impress_people = factor(impress_people),
+    distress = factor(distress),
+    impulsivity = factor(impulsivity),
+    resist_temptation = factor(resist_temptation),
+    long_term_goals = factor(long_term_goals),
+    economic_mobility = factor(economic_mobility),
+    age_group = factor(age_group)
+  )
+```
+
+Lastly, I saved the modified data frame as an .rds file to use it in the Shiny apps I created for visualization.
+
+```{r save-shiny-df}
+#| code-fold: true
+#| code-summary: "Saving Data Frame (expand to view code)"
+
+saveRDS(finance_analysis, file = "shiny-apps/data/finance_analysis.rds")
+```
+
+# Data Visualization
+
+## Visual Overview: Response Variable
+
+Most responses in our outcome variable fell in group 4, meaning respondents generally answered "very well" to the prompt "I know how to keep myself from spending too much." Group 1 ("not at all") had the fewest responses.
+
+If we were to reimagine this variable as binary, i.e., grouping responses 1–3 as "lower spending control" and responses 4–5 as "higher spending control", the majority of the responses would fall into the latter category.
+
+```{r spending-bar}
+#| fig-align: center
+#| code-fold: true
+#| code-summary: "Spending Habit Bar Chart (expand to view code)"
+
+spending_univariate <- ggplot(finance_analysis, aes(x = spending_habit)) +
+        geom_bar(fill = "#412d5e", alpha = 0.9) +
+        labs(
+          title = "Distribution of Spending Habit Scores",
+          x = "Scores (Ranging From '1: Not At All' to '5: Completely')",
+          y = "Number of Respondents",
+          caption = "Prompt: 'I know how to keep myself from spending too much.'") +
+        theme_minimal() +
+        theme(
+          plot.caption = element_text(hjust = 0, size = 10),
+          axis.text.x = element_text(angle = 45, hjust = 1)
+          )
+
+spending_univariate
+```
+
+## Bivariate Patterns
+
+Both `frugality` and `follow_commitment` show a positive trend: as `spending_habit` scores increase, the corresponding predictor scores also increase.
+
+This relationship is visually evident in the increasing density of points in the upper right areas of both plots, suggesting that respondents with higher reported spending habit scores also report higher frugality and stronger follow-through on commitments.
+
+```{r frugality-commitment-graphs}
+#| fig-align: center
+#| layout-ncol: 2
+#| code-fold: true
+#| code-summary: "Spending Habit & Frugality/Following Commitments Jitter Plots (expand to view code)"
+
+frugality_bivariate <- ggplot(finance_analysis, aes(x = frugality, 
+                                                    y = spending_habit, 
+                                                    color = spending_habit)) + 
+  geom_jitter() + 
+  labs(
+    title = "Relationship between spending_habit & frugality",
+    x = "Frugality Score",
+    y = "Spending Habit Score",
+    subtitle = "'I know how to keep myself from spending too much' & 'If I can reuse an item I already have, there's \nno sense in buying something new'",
+    caption = "* 'Spending Habits' scores range from 'not at all' (1) to 'completely' (5) \n* 'Frugality' scores range from 'strongly disagree' (1) to 'strongly agree' (6)") +
+  theme_minimal() +
+  scale_color_wa_d("stuart") +
+  theme(
+    plot.caption = element_text(hjust = 0, size = 10),
+    plot.subtitle = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+    )
+
+commitment_bivariate <- ggplot(finance_analysis, aes(x = follow_commitment, 
+                                             y = spending_habit, 
+                                             color = spending_habit)) + 
+  geom_jitter() + 
+  labs(
+    title = "Relationship between spending_habit & follow_commitment",
+    x = "Following Commitment Score",
+    y = "Spending Habit Score",
+    subtitle = "'I know how to keep myself from spending too much' & 'I follow-through on my financial \ncommitments to others'",
+    caption = "* 'Spending Habits' scores range from 'not at all' (1) to 'completely' (5) \n* 'Follow Commitment' scores range from 'not at all' (1) to 'completely' (5)") +
+  theme_minimal() +
+  scale_color_wa_d("stuart") +
+  theme(
+    plot.caption = element_text(hjust = 0, size = 10),
+    plot.subtitle = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+    )
+
+frugality_bivariate
+commitment_bivariate
+```
+
+Both `impress_people` and `impulsivity` display the opposite pattern: a negative relationship with `spending_habit`. As `spending_habit` scores increase, these predictor scores decrease, which can be seen in the decreasing density of points across the x-axis.
+
+This suggests that respondents with higher reported spending habit scores tend to report lower impulsivity and desire to impress others.
+
+```{r impression-impulsivity-graphs}
+#| fig-align: center
+#| layout-ncol: 2
+#| code-fold: true
+#| code-summary: "Spending Habit & Impressing People/Impulsivity Jitter Plots (expand to view code)"
+
+impress_bivariate <- ggplot(finance_analysis, aes(x = impress_people, 
+                                                    y = spending_habit, 
+                                                    color = spending_habit)) + 
+  geom_jitter() + 
+  labs(
+    title = "Relationship between spending_habit & impress_people",
+    x = "Impressing People Score",
+    y = "Spending Habit Score",
+    subtitle = "'I know how to keep myself from spending too much' & 'I like to own things that impress people'",
+    caption = "* 'Spending Habits' scores range from 'not at all' (1) to 'completely' (5) \n* 'Impress People' scores range from 'strongly disagree' (1) to 'strongly agree' (5)") +
+  theme_minimal() +
+  scale_color_wa_d("stuart") +
+  theme(
+    plot.caption = element_text(hjust = 0, size = 10),
+    plot.subtitle = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+    )
+
+impulsivity_bivariate <- ggplot(finance_analysis, aes(x = impulsivity, 
+                                             y = spending_habit, 
+                                             color = spending_habit)) + 
+  geom_jitter() + 
+  labs(
+    title = "Relationship between spending_habit & impulsivity",
+    x = "Impulsivity Score",
+    y = "Spending Habit Score",
+    subtitle = "'I know how to keep myself from spending too much' & 'I often act without thinking \nthrough all the alternatives'",
+    caption = "* 'Spending Habits' scores range from 'not at all' (1) to 'completely' (5) \n* 'Impulsivity' scores range from 'not at all' (1) to 'completely well' (4)") +
+  theme_minimal() +
+  scale_color_wa_d("stuart") +
+  theme(
+    plot.caption = element_text(hjust = 0, size = 10),
+    plot.subtitle = element_text(size = 10),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+    )
+
+impress_bivariate
+impulsivity_bivariate
+```
+
+# Interactive Visual Overviews
+
+## Data Dictionary & Univariate Plots
+
+This interactive app includes a data dictionary and visual summaries of how responses are distributed across each variable.
+
+```{=html}
+<iframe id="univariate" src="https://ashleymikali.shinyapps.io/spending_univariate/" style="border: none; width: 100%; height: 720px" frameborder="0"></iframe>
+```
+
+### Calculating Highlighted Points for Density Plots
+
+In two of the distribution graphs (the density plots for the quantitative predictors `wellbeing` and `psych`), specific points are highlighted to represent refused or unrecorded responses. These were plotted using `density()` to estimate the distribution of the variable and `approx()` to get the approximate y-value at the specified points.
+
+```{r calculate-density}
+#| code-fold: true
+#| code-summary: "Calculating Highlighted Points (expand to view code)"
+
+psych_dens <- density(finance_analysis$psych, na.rm = TRUE)
+psych_r_dens <- approx(psych_dens$x, psych_dens$y, xout = psych_refuse)$y
+
+wellbeing_dens <- density(finance_analysis$wellbeing, na.rm = TRUE)
+wellbeing_r_dens <- approx(wellbeing_dens$x, wellbeing_dens$y, xout = wellbeing_refuse)$y
+wellbeing_m_dens <- approx(wellbeing_dens$x, wellbeing_dens$y, xout = wellbeing_unwritten)$y
+```
+
+## Bivariate Plots
+
+This interactive app visually explores the relationship between each predictor and the response variable.
+
+```{=html}
+<iframe id="bivariate" src="https://ashleymikali.shinyapps.io/spending_bivariate/" style="border: none; width: 100%; height: 720px" frameborder="0"></iframe>
+```
+
+# Model Management
+
+## Preparing Data for Modeling
+
+As was done before, I created a new column to hold the number of refused questions per observation.
+
+```{r count-refusals-maodeling}
+#| code-fold: true
+#| code-summary: "Counting Refusals (expand to view code)"
+
+finance_modeling <- finance_modeling |>
+  mutate(
+    refused_questions = rowSums(across(-c(wellbeing), ~ .x == -1))
+    )
+```
+
+To prepare the missing (refused/unrecorded) values for imputation, I re-encoded them as `NA`.
+
+```{r make-na}
+#| code-fold: true
+#| code-summary: "Re-encoding Missing Values as NA (expand to view code)"
+
+finance_modeling <- finance_modeling |>
+  mutate(
+    across(-all_of("refused_questions"), ~ ifelse(. %in% c(-1, -4), NA, .))
+  )
+```
+
+I [used the median to impute missing values in the categorical variables](https://medium.com/@aaabulkhair/data-imputation-demystified-time-series-data-69bc9c798cb7), since, despite being categorical, they were also ordinal (i.e., there was a meaningful order between categories).
+
+```{r impute-categorical}
+#| code-fold: true
+#| code-summary: "Imputing Missing Values in Qualitative Variables (expand to view code)"
+
+finance_modeling <- finance_modeling |>
+  mutate(
+      across(-c("psych", "wellbeing", "refused_questions", "age_group"), impute_median)
+      )
+```
+
+[I used histograms to determine how to approach imputation for the quantitative variables](https://feature-engine.trainindata.com/en/1.8.x/user_guide/imputation/MeanMedianImputer.html#:~:text=Therefore%2C%20we’d%20use%20mean%20imputation%20when%20the%20data%20shows%20anormal%20distribution%2C%20or%20the%20distribution%20is%20otherwise%20symmetrical%2C%20and%20median%20imputationwhen%20the%20variables%20are%20skewed.). Since `psych` was negatively skewed and `wellbeing` was approximately normally distributed, I imputed missing values using the median for `psych` and the mean for `wellbeing`.
+
+```{r quantitative-histogram}
+#| warning: false
+#| layout-ncol: 2
+#| code-fold: true
+#| code-summary: "Exploring Distribution of Quantitative Variables (expand to view code)"
+
+gf_histogram(~psych, data = finance_modeling, fill = "#412d5e", alpha = 0.9) +
+  theme_minimal()
+gf_histogram(~wellbeing, data = finance_modeling, fill = "#412d5e", alpha = 0.9) +
+  theme_minimal()
+```
+
+```{r impute-quantitative}
+#| code-fold: true
+#| code-summary: "Imputing Missing Values in Quantitative Variables (expand to view code)"
+
+finance_modeling <- finance_modeling |>
+  mutate(
+      psych = impute_median(psych)
+      )
+
+finance_modeling <- finance_modeling |>
+  mutate(
+      wellbeing = impute_mean(wellbeing)
+      )
+```
+
+Since this is a binary logistic regression, I created a new variable representing a binary version of the original response.
+
+Category 1 includes responses 4 and 5, indicating excellent reported spending habit**s**, while Category 0 includes responses 1 through 3, indicating comparatively weaker reported spending habits.
+
+```{r}
+#| code-fold: true
+#| code-summary: "Creating Binary Response Variable (expand to view code)"
+
+finance_modeling <- finance_modeling |>
+  mutate(
+     spending_binary = if_else(spending_habit >= 4, 1, 0)
+  )
+```
+
+To tie it all together, I factored the categorical variables (again).
+
+```{r factor-variables-modeling}
+#| code-fold: true
+#| code-summary: "Factoring Categorical Variables (expand to view code)"
+
+finance_modeling <- finance_modeling |>
+  mutate(
+    spending_habit = factor(spending_habit),
+    follow_commitment = factor(follow_commitment),
+    frugality = factor(frugality),
+    worded_probability = factor(worded_probability),
+    percentage_skill = factor(percentage_skill),
+    goal_confidence = factor(goal_confidence),
+    admire_luxury = factor(admire_luxury),
+    self_worth = factor(self_worth),
+    impress_people = factor(impress_people),
+    distress = factor(distress),
+    impulsivity = factor(impulsivity),
+    resist_temptation = factor(resist_temptation),
+    long_term_goals = factor(long_term_goals),
+    economic_mobility = factor(economic_mobility),
+    age_group = factor(age_group)
+  )
+```
+
+## Models, Metrics, & Thoughts
+
+First, I fitted a binary logistic regression model and included all of the predictor variables. This served as a baseline for feature selection.
+
+```{r fitting-general-model}
+#| code-fold: show
+#| code-summary: "Fitting General Model With All Predictors (expand to view code)"
+
+general_model <- glm(spending_binary ~ . - spending_habit, data = finance_modeling, family = "binomial")
+```
+
+### Feature Selection
+
+I used stepwise selection (both forward and backward) to identify the "best" set of predictors (i.e., predictors with a statistically meaningful relationship to the response variable). This was done twice: once using AIC (Akaike Information Criterion), and once using BIC (Bayesian Information Criterion).
+
+AIC and BIC are model selection metrics, but they have different priorities. [AIC prioritizes predictive performance by balancing model fit and model complexity, while BIC prioritizes simpler models by applying a stronger penalty for model complexity](https://vitalflux.com/aic-vs-bic-for-regression-models-formula-examples/).
+
+In other words, AIC generally favors more complex models that include predictors contributing meaningfully to accuracy, whereas BIC is stricter and prefers a simpler model with only the most impactful predictors.
+
+Applied here, AIC is used to identify predictors that have some relationship with the response, while BIC narrows our focus to the strongest predictors.
+
+```{r aic-stepwise}
+#| cache: true
+#| code-fold: show
+#| code-summary: "Stepwise Selection with AIC (expand to view code)"
+
+model_AIC <- stepAIC(general_model, direction = "both", k = 2, trace = FALSE)
+```
+
+```{r bic-stepwise}
+#| cache: true
+#| code-fold: show
+#| code-summary: "Stepwise Selection with BIC (expand to view code)"
+
+# I needed to get the number of observations
+n <- nrow(finance_modeling)
+
+model_BIC <- stepAIC(general_model, direction = "both", k = log(n), trace = FALSE)
+```
+
+#### Examining the AIC Model
+
+According to the AIC model, the most indicative predictors of spending habits include:
+
+-   Financial behaviors: ability to follow \[financial\] commitments, be frugal, resist temptation, and work toward long-term goals; financial well-being score
+
+-   Cognitive preferences: preference for numbers over words and comfort with percentages
+
+-   Psychological factors: confidence in financial goals, desire to impress others, psychological connectedness, stress, and impulsivity
+
+-   Demographics: age group
+
+```{r aic-model}
+#| code-fold: true
+#| code-summary: "AIC Model Formula (expand to view code)"
+
+formula(model_AIC)
+```
+
+#### Examining the BIC Model
+
+According to the BIC model, the strongest predictors related to one's spending habits are
+
+-   Ability to follow commitments
+
+-   Frugality
+
+-   Confidence in achieving financial goals
+
+-   Impulsivity
+
+-   Ability to resist temptation
+
+-   Financial well-being score
+
+```{r bic-model}
+#| code-fold: true
+#| code-summary: "BIC Model Formula (expand to view code)"
+
+formula(model_BIC)
+```
+
+### Model Assumptions
+
+[Successful logistic regression requires a few assumptions](https://medium.com/@skme20417/4-assumptions-and-limitations-of-logistic-regression-navigating-the-nuances-8ef249cc7a01), namely:
+
+1.  Linearity of Log-Odds
+
+    I assessed this by [plotting the log-odds against the predictors](https://bookdown.org/sarahwerth2024/CategoricalBook/logistic-regression-r.html). This required a few steps:
+
+    ```{r new-predictor-df}
+    #| code-fold: true
+    #| code-summary: "Making a New Data Frame With Predictors and Response From Model (expand to view code)"
+
+    bic_finance <- finance_modeling |>
+      dplyr::select(spending_binary, follow_commitment, frugality, goal_confidence, impulsivity, resist_temptation, wellbeing)
+    ```
+
+    ```{r getting-probabilities}
+    #| code-fold: show
+    #| code-summary: "Extracting Predicted Probabilities (expand to view code)"
+
+    predictors <- colnames(bic_finance) 
+
+    bic_finance$probabilities <- model_BIC$fitted.values
+    ```
+
+    ```{r logit-values}
+    #| warning: false
+    #| code-fold: show
+    #| code-summary: "Calculating Logit Values (expand to view code)"
+
+    bic_finance <- bic_finance |>
+      mutate(logit = log(probabilities/(1-probabilities))) |>
+      dplyr::select(-probabilities) |>
+      gather(key = "predictors", value = "predictor.value", -logit) 
+    ```
+
+    ```{r log-odds-plot}
+    #| fig-align: center
+    #| code-fold: true
+    #| code-summary: "Displaying Log-Odds Against Predictors (expand to view code)"
+
+    log_plot <- ggplot(bic_finance, aes(y = logit, x = predictor.value))+
+      geom_point(size = 0.5, alpha = 0.5) +
+      geom_smooth(method = "loess") + 
+      theme_bw() + 
+      facet_wrap(~predictors, scales = "free_x")
+
+    log_plot
+    ```
+
+    The categorical (ordinal) predictors appeared stable across levels. The continuous variable `wellbeing` showed a roughly linear trend, suggesting the assumption of linearity on the logit scale was reasonably met.
+
+    To avoid redundancy, I only did this for the BIC model. We can reasonably assume that the assumption holds true for the AIC model.
+
+2.  Independence of Observations
+
+    Each observation represents a unique, individual survey response. No groups (such as same households or repeat responses) are present. Therefore, the model meets this assumption.
+
+3.  Absence of Multicollinearity
+
+    I used `vif()` to [look for potential multicollinearity](https://www.spsanderson.com/steveondata/posts/2023-12-18/index.html).
+
+    AIC Model:
+
+    ```{r aic-vif}
+    #| code-fold: show
+    #| code-summary: "AIC Model Variance (expand to view code)"
+    vif_aic <- vif(model_AIC)
+    vif_aic |> kable()
+    ```
+
+    The $GVIF^{(\frac{1}{2\times Df})}$ column contains adjusted VIF values. All values are below 2, indicating no serious multicollinearity.
+
+    BIC Model:
+
+    ```{r bic-vif}
+    #| code-fold: show
+    #| code-summary: "BIC Model Variance (expand to view code)"
+    vif_bic <- vif(model_BIC)
+    vif_bic |> kable()
+    ```
+
+    Similarly, all values in the $GVIF^{(\frac{1}{2\times Df})}$ column are less than 2, once again indicating that there is no notable multicollinearity.
+
+4.  No (Influential) Outliers I [used standardized residuals to identify potential outliers](https://www.sthda.com/english/articles/36-classification-methods-essentials/148-logistic-regression-assumptions-and-diagnostics-in-r/#influential-values). No observations exceeded the common threshold of ±3, suggesting the model fits individual data points well and meets the assumption of no extreme residuals.
+
+    ```{r resid-aug}
+    #| code-fold: true
+    #| code-summary: "Augmenting Model and Filtering Residuals (expand to view code)"
+
+    model_info <- augment(model_BIC)
+
+    model_info |>
+      filter(abs(.std.resid) > 3)
+    ```
+
+5.  Binary/Ordinal Dependent Variable
+
+    -   I used `spending_binary` as the response variable. Consequently, both models meet this assumption.
+
+------------------------------------------------------------------------
+
+To wrap things up, I ranked the predictors based on their coefficients. The higher the coefficient is, the stronger the relationship.
+
+```{r ranking-predictors}
+#| code-fold: true
+#| code-summary: "Ranking Predictors Based On Effect (expand to view code)"
+
+coef_summary <- summary(model_BIC)$coefficients
+
+# I had to turn the summary into a data frame so I could group by variable
+coef_df <- as.data.frame(coef_summary) |>
+  mutate(term = rownames(coef_summary)) |>
+  filter(term != "(Intercept)") |>
+  mutate(variable = str_remove(term, "\\d+$")) |>
+  group_by(variable) |>
+  summarise(total_effect = sum(abs(Estimate))) |>
+  arrange(desc(total_effect))
+
+coef_df |> kable()
+```
+
+Our takeaway here is that `frugality` and `resist_temptation` are the strongest factors contributing to a respondent's `spending_habit` score.
+
+I used a predicted probabilities plot to visualize how these two factors affected our model.
+
+```{r predicted-prob-plot}
+#| fig-align: center
+#| code-fold: true
+#| code-summary: "Predicted Probabilities Plot (frugality & resisting temptation) (expand to view code)"
+
+get_mode <- function(x) {
+  ux <- na.omit(x)
+  ux[which.max(tabulate(match(ux, ux)))]
+}
+
+grid <- expand.grid(
+  impulsivity = get_mode(finance_modeling$impulsivity),
+  resist_temptation = sort(unique(finance_modeling$resist_temptation)),
+  follow_commitment = get_mode(finance_modeling$follow_commitment),
+  frugality = sort(unique(finance_modeling$frugality)),
+  goal_confidence = get_mode(finance_modeling$goal_confidence),
+  wellbeing = mean(finance_modeling$wellbeing, na.rm = TRUE)
+)
+
+grid$predicted_prob <- predict(model_BIC, newdata = grid, type = "response")
+
+predicted_probability_plot <- ggplot(grid, aes(x = frugality, y = predicted_prob, color = resist_temptation, group = resist_temptation)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  theme_minimal() +
+  scale_color_wa_d("stuart") +
+  theme(plot.subtitle = element_text(size = 9),
+        plot.caption = element_text(hjust = 0))
+
+predicted_probability_plot
+```
+
+As `frugality` and `resist_temptation` scores increased, so did the predicted probability of having a "good" `spending_habit` score.
+
+# Final Thoughts
+
+In conclusion, discipline (ability to be frugal and resist temptation) was the biggest indicator of one's spending habits.
+
+The ability to follow through with commitments, curb impulsivity, and confidence in achieving financial goals were also notable factors.
+
+The financial well-being score also had a noticeable impact, but it was weak compared to the aforementioned factors.
+
+## Limitations
+
+Scores were self-reported, and, given the nature of the topic, likely unreliable.
+
+# Reflection
+
+The first iteration of this project was for my *Multiple Regression Analysis* class and looked nothing like this final version. I spent a bit of time "improving" it, breaking it, starting over, and changing my approach along the way. Personally, this project represents growth; it was me asking: *how can I take this thing I did and make it better?*
+
+At one point, I considered using a random forest to find the "best" predictors. At another time, I attempted multinomial logistic regression. These experiments, while fun, reminded me to "keep it simple, stupid!" where appropriate, especially since my main objective was to explore potential relationships.
+
+I am not opposed to using what I've learned in my *Statistical Machine Learning* class to create a classification tool in the future. That is likely what I will do next, as I continue to build, break, learn, and repeat.

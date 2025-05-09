@@ -1,0 +1,12 @@
+name: sp-test-dd
+title: sp-test-dd
+username: ashleymikali
+account: ashleymikali
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 14505152
+bundleId: 10102699
+url: https://ashleymikali.shinyapps.io/sp-test-dd/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

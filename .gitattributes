@@ -1,2 +1,2 @@
 *.qmd linguist-language=R
-*.html linguist-document
+*.html linguist-language=R
