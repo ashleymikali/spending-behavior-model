@@ -13,7 +13,7 @@ format:
     code-overflow: wrap
     toc: true
     number-sections: true
-theme: flatly
+#theme: flatly
 editor: visual
 page-layout: full
 ---
