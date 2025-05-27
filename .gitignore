@@ -5,3 +5,4 @@ notes.txt
 .Rhistory
 .RDataTmp
 .Rproj
+*_cache/
