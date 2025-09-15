@@ -2,6 +2,9 @@
 title: "Analyzing Spending Habits With Logistic Regression"
 author: "Ashley Russell"
 description: "Exploring indicators of spending habit behaviors using logistic regression."
+date: 02/11/2025
+date-modified: 09/14/2025
+date-format: long
 image: spending-habits-analysis_files/figure-html/predicted-prob-plot-1.png
 categories:
   - R
@@ -786,7 +789,7 @@ The financial well-being score also had a noticeable impact, but it was weak com
 
 Scores were self-reported, and, given the nature of the topic, likely unreliable.
 
-# Reflection
+## Reflection
 
 The first iteration of this project was for my *Multiple Regression Analysis* class and looked nothing like this final version. I spent a bit of time "improving" it, breaking it, starting over, and changing my approach along the way. Personally, this project represents growth; it was me asking: *how can I take this thing I did and make it better?*
 
