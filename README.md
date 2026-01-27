@@ -136,7 +136,6 @@ This project started as a regression assignment and evolved into a meaningful ex
 
 ## Connect
 
-**Ashley Russell-Raglin**
 - Portfolio: [ashleymikali.com](https://ashleymikali.com)
 - GitHub: [@ashleymikali](https://github.com/ashleymikali)
 - Email: ashkalirussell@gmail.com
